@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity"
+    android:background="@color/white">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <fragment
+            android:id="@+id/map"
+            android:name="com.google.android.gms.maps.SupportMapFragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="150dp"
+            android:background="@color/white">
+            <androidx.appcompat.widget.SearchView
+                android:layout_width="350dp"
+                android:layout_height="50dp"
+                android:id="@+id/location"
+                android:background="@drawable/et_bg"
+                android:paddingLeft="10dp"
+                android:paddingRight="20dp"
+                android:layout_gravity="center_horizontal|top"
+                android:layout_marginTop="20dp"
+                android:elevation="4dp"
+                android:singleLine="true"
+                app:iconifiedByDefault="false"
+                app:queryHint="Search Here"/>
+
+            <androidx.appcompat.widget.SearchView
+                android:layout_width="350dp"
+                android:layout_height="50dp"
+                android:id="@+id/destinationSearchView"
+                android:background="@drawable/et_bg"
+                android:paddingLeft="10dp"
+                android:paddingRight="20dp"
+                android:layout_gravity="center_horizontal|top"
+                android:layout_marginTop="80dp"
+                android:elevation="4dp"
+                android:singleLine="true"
+                app:iconifiedByDefault="false"
+                app:queryHint="Destination"/>
+        </FrameLayout>
+
+    </FrameLayout>
+
+</RelativeLayout>

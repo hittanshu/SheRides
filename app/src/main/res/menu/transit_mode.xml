@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/page_1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:enabled="true"
+        android:icon="@drawable/train"
+        android:title=""/>
+    <item
+        android:id="@+id/page_2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:enabled="true"
+        android:icon="@drawable/bus"
+        android:title=""/>
+    <item
+        android:id="@+id/page_3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:enabled="true"
+        android:icon="@drawable/auto"
+        android:title=""/>
+    <item
+        android:id="@+id/page_4"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:enabled="true"
+        android:icon="@drawable/walk"
+        android:title=""/>
+</menu>

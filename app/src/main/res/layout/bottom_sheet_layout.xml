@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@color/white">
+
+    <androidx.appcompat.widget.SearchView
+        android:background="@drawable/et_bg"
+        android:id="@+id/destinationSearchView"
+        android:layout_width="350dp"
+        android:layout_height="50dp"
+        android:hint="Enter destination"
+        android:inputType="text"
+        android:paddingLeft="10dp"
+        android:layout_marginBottom="40dp"
+        android:singleLine="true"
+        android:paddingRight="20dp"
+        android:layout_gravity="center"
+        app:queryHint="Destination"
+        app:iconifiedByDefault="false"/>
+
+</LinearLayout>
