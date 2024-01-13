@@ -65,7 +65,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         destinationSearchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
-                geocodeDestination(query);
+                geocodeDestination(query, latLng -> {
+                    end = latLng;
+                    checkAndDrawRoute();
+                });
                 return false;
             }
 
@@ -79,7 +82,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         locationEditText.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
-                geocodeLocation(query);
+                geocodeLocation(query, latLng -> {
+                    start = latLng;
+                    checkAndDrawRoute();
+                });
                 return false;
             }
 
@@ -94,30 +100,66 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mapFragment.getMapAsync(this);
     }
 
-    private void geocodeDestination(String query) {
+    private void geocodeLocation(String query, GeocodeCallback callback) {
+        Geocoder geocoder = new Geocoder(this);
+        new Thread(() -> {
+            try {
+                List<Address> addresses = geocoder.getFromLocationName(query, 1);
+                runOnUiThread(() -> {
+                    if (addresses != null && !addresses.isEmpty()) {
+                        Address address = addresses.get(0);
+                        LatLng searchedLatLng = new LatLng(address.getLatitude(), address.getLongitude());
+                        start = searchedLatLng;
+
+                        if (locationMarker != null) {
+                            locationMarker.setPosition(searchedLatLng);
+                        } else {
+                            locationMarker = mMap.addMarker(new MarkerOptions().position(searchedLatLng).title("Your Location"));
+                        }
+
+                        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(searchedLatLng, 16.0f));
+
+                        if (callback != null) {
+                            callback.onGeocodeComplete(searchedLatLng);
+                        }
+                    } else {
+                        Toast.makeText(this, "Location not found", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            } catch (IOException e) {
+                e.printStackTrace();
+                runOnUiThread(() -> Toast.makeText(this, "Error finding location", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
+
+    private void geocodeDestination(String query, GeocodeCallback callback) {
         if (!query.isEmpty()) {
             Geocoder geocoder = new Geocoder(this, Locale.getDefault());
             new Thread(() -> {
                 try {
                     List<Address> addresses = geocoder.getFromLocationName(query, 1);
-                    if (addresses != null && !addresses.isEmpty()) {
-                        Address address = addresses.get(0);
-                        LatLng destinationLatLng = new LatLng(address.getLatitude(), address.getLongitude());
-                        end = destinationLatLng;
-                        runOnUiThread(() -> {
+                    runOnUiThread(() -> {
+                        if (addresses != null && !addresses.isEmpty()) {
+                            Address address = addresses.get(0);
+                            LatLng destinationLatLng = new LatLng(address.getLatitude(), address.getLongitude());
+                            end = destinationLatLng;
+
                             if (destinationMarker != null) {
-                                // Move the existing marker
                                 destinationMarker.setPosition(destinationLatLng);
-                                drawRoute(start, end);
                             } else {
-                                // Create a new marker
                                 destinationMarker = mMap.addMarker(new MarkerOptions().position(destinationLatLng).title("Destination"));
                             }
+
                             mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(destinationLatLng, 15));
-                        });
-                    } else {
-                        runOnUiThread(() -> Toast.makeText(MainActivity.this, "Location not found", Toast.LENGTH_SHORT).show());
-                    }
+
+                            if (callback != null) {
+                                callback.onGeocodeComplete(destinationLatLng);
+                            }
+                        } else {
+                            Toast.makeText(MainActivity.this, "Location not found", Toast.LENGTH_SHORT).show();
+                        }
+                    });
                 } catch (IOException e) {
                     e.printStackTrace();
                     runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error finding location", Toast.LENGTH_SHORT).show());
@@ -126,31 +168,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    private void geocodeLocation(String query) {
-        Geocoder geocoder = new Geocoder(this);
-        try {
-            List<Address> addresses = geocoder.getFromLocationName(query, 1);
-            if (addresses != null && !addresses.isEmpty()) {
-                Address address = addresses.get(0);
-                LatLng searchedLatLng = new LatLng(address.getLatitude(), address.getLongitude());
-                start = searchedLatLng;
 
-                runOnUiThread(() -> {
-                    if (locationMarker != null) {
-                        // Move the existing marker
-                        locationMarker.setPosition(searchedLatLng);
-                        drawRoute(start, end);
-                    } else {
-                        // Create a new marker
-                        locationMarker = mMap.addMarker(new MarkerOptions().position(searchedLatLng).title("Your Location"));
-                    }
-                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(searchedLatLng, 16.0f));
-                });
-            } else {
-                Toast.makeText(this, "Location not found", Toast.LENGTH_SHORT).show();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+    interface GeocodeCallback{
+        void onGeocodeComplete(LatLng latLng);
+    }
+
+    private void checkAndDrawRoute() {
+        if (start != null && end != null) {
+            drawRoute(start, end);
         }
     }
 
