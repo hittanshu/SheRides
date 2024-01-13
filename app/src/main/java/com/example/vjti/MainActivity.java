@@ -314,6 +314,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                     if (location != null) {
                                         LatLng userLocation = new LatLng(location.getLatitude(), location.getLongitude());
                                         setAddressInEditText(userLocation);
+                                        updateSearchViewWithLocation(location);
                                         mMap.addMarker(new MarkerOptions().position(userLocation).title("Your Location"));
                                         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLocation, 16));
                                         start = userLocation;
@@ -325,6 +326,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(india, 5));
                 }
             }
+        }
+    }
+
+    private void updateSearchViewWithLocation(Location location) {
+        Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+        try {
+            List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+            if (addresses != null && !addresses.isEmpty()) {
+                String address = addresses.get(0).getAddressLine(0);
+                locationEditText.setQuery(address, false);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }
