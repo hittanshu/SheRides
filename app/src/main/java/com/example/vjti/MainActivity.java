@@ -7,9 +7,12 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.Manifest;
+import android.graphics.Color;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
@@ -23,13 +26,21 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.tasks.Task;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import android.location.Geocoder;
 import android.location.Address;
 import android.widget.Toast;
+import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.maps.android.PolyUtil;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -40,6 +51,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private FusedLocationProviderClient fusedLocationClient;
     private SearchView locationEditText, destinationSearchView;
     private Marker locationMarker, destinationMarker;
+    private LatLng start, end;
 
 
     @Override
@@ -91,11 +103,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     if (addresses != null && !addresses.isEmpty()) {
                         Address address = addresses.get(0);
                         LatLng destinationLatLng = new LatLng(address.getLatitude(), address.getLongitude());
-
+                        end = destinationLatLng;
                         runOnUiThread(() -> {
                             if (destinationMarker != null) {
                                 // Move the existing marker
                                 destinationMarker.setPosition(destinationLatLng);
+                                drawRoute(start, end);
                             } else {
                                 // Create a new marker
                                 destinationMarker = mMap.addMarker(new MarkerOptions().position(destinationLatLng).title("Destination"));
@@ -120,11 +133,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             if (addresses != null && !addresses.isEmpty()) {
                 Address address = addresses.get(0);
                 LatLng searchedLatLng = new LatLng(address.getLatitude(), address.getLongitude());
+                start = searchedLatLng;
 
                 runOnUiThread(() -> {
                     if (locationMarker != null) {
                         // Move the existing marker
                         locationMarker.setPosition(searchedLatLng);
+                        drawRoute(start, end);
                     } else {
                         // Create a new marker
                         locationMarker = mMap.addMarker(new MarkerOptions().position(searchedLatLng).title("Your Location"));
@@ -139,32 +154,85 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    private void handleDestinationSearch(String destination) {
-        if (!destination.isEmpty()) {
-            new Thread(() -> {
-                Geocoder geocoder = new Geocoder(MainActivity.this);
-                try {
-                    List<Address> addresses = geocoder.getFromLocationName(destination, 1);
-                    if (addresses.size() > 0) {
-                        runOnUiThread(() -> {
-                            Address address = addresses.get(0);
-                            LatLng latLng = new LatLng(address.getLatitude(), address.getLongitude());
-                            mMap.addMarker(new MarkerOptions().position(latLng).title("Destination"));
-                            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15));
-                            // Implement route drawing if needed
-                        });
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    // Handle exception, for example, show a toast message
-                }
-            }).start();
-        }
+    private void drawRoute(LatLng start, LatLng end) {
+        String url = getOpenRouteServiceUrl(start, end);
+        new FetchRouteData().execute(url);
     }
 
-    private void drawRoute(SearchView location, LatLng latLng) {
-        Toast.makeText(this, "aa", Toast.LENGTH_SHORT).show();
+    private String getOpenRouteServiceUrl(LatLng start, LatLng end) {
+        String str_origin = start.longitude + "," + start.latitude;
+        String str_dest = end.longitude + "," + end.latitude;
+        String url = "https://api.openrouteservice.org/v2/directions/driving-car?api_key=5b3ce3597851110001cf6248e4e56cd72eff4f51ad6bd3024be994de&start=" + str_origin + "&end=" + str_dest;
+        Log.d("URL", "OpenRouteService URL: " + url);
+        return url;
     }
+
+
+
+
+    private class FetchRouteData extends AsyncTask<String, Void, String> {
+        @Override
+        protected String doInBackground(String... url) {
+            try {
+                Log.d("FetchRouteData", "Requesting route data");
+                URL directionUrl = new URL(url[0]);
+                HttpURLConnection connection = (HttpURLConnection) directionUrl.openConnection();
+                connection.setRequestMethod("GET");
+                connection.connect();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                StringBuilder builder = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    builder.append(line);
+                }
+                return builder.toString();
+            } catch (Exception e) {
+                Log.e("FetchRouteData", "Error: " + e.getMessage(), e);
+                return null;
+            }
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            super.onPostExecute(result);
+            if (result != null) {
+                Log.d("FetchRouteData", "Response: " + result);
+                try {
+                    JSONObject jsonObject = new JSONObject(result);
+                    JSONArray features = jsonObject.getJSONArray("features");
+                    if (features.length() > 0) {
+                        JSONObject feature = features.getJSONObject(0);
+                        JSONObject geometry = feature.getJSONObject("geometry");
+                        JSONArray coordinates = geometry.getJSONArray("coordinates");
+
+                        List<LatLng> routePoints = new ArrayList<>();
+                        for (int i = 0; i < coordinates.length(); i++) {
+                            JSONArray coordinate = coordinates.getJSONArray(i);
+                            double longitude = coordinate.getDouble(0);
+                            double latitude = coordinate.getDouble(1);
+                            routePoints.add(new LatLng(latitude, longitude));
+                        }
+
+                        if (!routePoints.isEmpty()) {
+                            PolylineOptions polylineOptions = new PolylineOptions()
+                                    .addAll(routePoints)
+                                    .width(10)
+                                    .color(Color.BLUE);
+
+                            mMap.addPolyline(polylineOptions);
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.e("FetchRouteData", "Error parsing JSON: " + e.getMessage(), e);
+                }
+            } else {
+                Log.e("FetchRouteData", "No result received");
+            }
+        }
+
+    }
+
+
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
@@ -223,11 +291,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                         setAddressInEditText(userLocation);
                                         mMap.addMarker(new MarkerOptions().position(userLocation).title("Your Location"));
                                         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLocation, 16));
+                                        start = userLocation;
                                     }
                                 });
                     }
                 } else {
-                    // Coordinates for New Delhi, India
                     LatLng india = new LatLng(28.6139, 77.2090);
                     mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(india, 5));
                 }
