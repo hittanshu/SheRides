@@ -63,6 +63,7 @@
         android:layout_marginTop="16dp"
         android:text="Don't have an account? Register"
         android:clickable="true"
-        android:onClick="register"/>
+        android:onClick="register"
+        android:focusable="true" />
 
 </RelativeLayout>

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1012496271653",
+    "project_id": "sherides-3d0c3",
+    "storage_bucket": "sherides-3d0c3.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1012496271653:android:046d19cbf315961be072cc",
+        "android_client_info": {
+          "package_name": "com.example.vjti"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgoWZfbY3fPCzBtVqBkwMzV13rBYxA0Ds"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
