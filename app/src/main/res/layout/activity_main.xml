@@ -50,6 +50,16 @@
                 app:queryHint="Destination"/>
         </FrameLayout>
 
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="170dp"
+            android:layout_marginLeft="290dp"
+            app:cornerRadius="5dp"
+            android:backgroundTint="#EC1822"
+            android:text="S O S"
+            android:onClick="sos"/>
+
     </FrameLayout>
 
 </RelativeLayout>

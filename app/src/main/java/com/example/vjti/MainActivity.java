@@ -7,7 +7,9 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.Manifest;
+import android.content.Intent;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.content.pm.PackageManager;
@@ -26,9 +28,11 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.model.Polyline;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import android.location.Geocoder;
 import android.location.Address;
+import android.widget.TextView;
 import android.widget.Toast;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.maps.android.PolyUtil;
@@ -52,6 +56,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private SearchView locationEditText, destinationSearchView;
     private Marker locationMarker, destinationMarker;
     private LatLng start, end;
+    private Polyline currentPolyline;
 
 
     @Override
@@ -111,12 +116,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         LatLng searchedLatLng = new LatLng(address.getLatitude(), address.getLongitude());
                         start = searchedLatLng;
 
-                        if (locationMarker != null) {
-                            locationMarker.setPosition(searchedLatLng);
-                        } else {
-                            locationMarker = mMap.addMarker(new MarkerOptions().position(searchedLatLng).title("Your Location"));
+                        // Check if the existing marker is the "Your Location" marker and remove it
+                        if (locationMarker != null && locationMarker.getTitle().equals("Your Location")) {
+                            locationMarker.remove();
                         }
 
+                        // Add a new marker for the searched location
+                        locationMarker = mMap.addMarker(new MarkerOptions().position(searchedLatLng).title("Searched Location"));
                         mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(searchedLatLng, 16.0f));
 
                         if (callback != null) {
@@ -133,6 +139,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }).start();
     }
 
+
     private void geocodeDestination(String query, GeocodeCallback callback) {
         if (!query.isEmpty()) {
             Geocoder geocoder = new Geocoder(this, Locale.getDefault());
@@ -146,11 +153,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             end = destinationLatLng;
 
                             if (destinationMarker != null) {
-                                destinationMarker.setPosition(destinationLatLng);
-                            } else {
-                                destinationMarker = mMap.addMarker(new MarkerOptions().position(destinationLatLng).title("Destination"));
-                            }
-
+                                destinationMarker.remove();
+                            } destinationMarker = mMap.addMarker(new MarkerOptions().position(destinationLatLng).title("Destination"));
                             mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(destinationLatLng, 15));
 
                             if (callback != null) {
@@ -180,6 +184,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void drawRoute(LatLng start, LatLng end) {
+        if (currentPolyline != null) {
+            currentPolyline.remove();
+        }
         String url = getOpenRouteServiceUrl(start, end);
         new FetchRouteData().execute(url);
     }
@@ -191,9 +198,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Log.d("URL", "OpenRouteService URL: " + url);
         return url;
     }
-
-
-
 
     private class FetchRouteData extends AsyncTask<String, Void, String> {
         @Override
@@ -225,6 +229,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 try {
                     JSONObject jsonObject = new JSONObject(result);
                     JSONArray features = jsonObject.getJSONArray("features");
+                    PolylineOptions polylineOptions = null;
                     if (features.length() > 0) {
                         JSONObject feature = features.getJSONObject(0);
                         JSONObject geometry = feature.getJSONObject("geometry");
@@ -239,13 +244,22 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         }
 
                         if (!routePoints.isEmpty()) {
-                            PolylineOptions polylineOptions = new PolylineOptions()
+                            polylineOptions = new PolylineOptions()
                                     .addAll(routePoints)
                                     .width(10)
                                     .color(Color.BLUE);
-
-                            mMap.addPolyline(polylineOptions);
                         }
+                    }
+
+                    // Remove the previous polyline if it exists
+                    if (currentPolyline != null) {
+                        currentPolyline.remove();
+                    }
+
+                    // Draw the new polyline
+                    if (polylineOptions != null) {
+                        currentPolyline = mMap.addPolyline(polylineOptions);
+                        openBottomSheetWithInfo(start, end);
                     }
                 } catch (Exception e) {
                     Log.e("FetchRouteData", "Error parsing JSON: " + e.getMessage(), e);
@@ -255,7 +269,130 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         }
 
+
     }
+
+    private float calculateDistance(LatLng start, LatLng end) {
+        float[] results = new float[1];
+        Location.distanceBetween(start.latitude, start.longitude, end.latitude, end.longitude, results);
+        return results[0] / 1000; // returns distance in kilometers
+    }
+
+    private void openBottomSheetWithInfo(LatLng start, LatLng end) {
+        float distance = calculateDistance(start, end);
+
+        TaxiInfo autoRickshaw = new TaxiInfo("Auto Rickshaw", calculatePrice("Auto Rickshaw", distance), calculateTime("Auto Rickshaw", distance));
+        TaxiInfo economyTaxi = new TaxiInfo("Economy Taxi", calculatePrice("Economy Taxi", distance), calculateTime("Economy Taxi", distance));
+        TaxiInfo sedanTaxi = new TaxiInfo("Sedan Taxi", calculatePrice("Sedan Taxi", distance), calculateTime("Sedan Taxi", distance));
+        TaxiInfo suvTaxi = new TaxiInfo("SUV Taxi", calculatePrice("SUV Taxi", distance), calculateTime("SUV Taxi", distance));
+
+        showBottomSheet(autoRickshaw, economyTaxi, sedanTaxi, suvTaxi);
+    }
+
+
+    public class TaxiInfo {
+        String name;
+        float price;
+        int time;
+
+        public TaxiInfo(String name, float price, int time) {
+            this.name = name;
+            this.price = price;
+            this.time = time;
+        }
+
+        // Getters
+        public String getName() { return name; }
+        public float getPrice() { return price; }
+        public int getTime() { return time; }
+    }
+
+    private float calculatePrice(String transportMode, float distance) {
+        float rate;
+        switch (transportMode) {
+            case "Auto Rickshaw":
+                rate = 15; // per kilometer
+                break;
+            case "Economy Taxi":
+                rate = 20;
+                break;
+            case "Sedan Taxi":
+                rate = 25;
+                break;
+            case "SUV Taxi":
+                rate = 30;
+                break;
+            default:
+                rate = 20;
+        }
+        return distance * rate;
+    }
+
+    private int calculateTime(String transportMode, float distance) {
+        float speed;
+        switch (transportMode) {
+            case "Auto Rickshaw":
+                speed = 30; // km/h
+                break;
+            case "Economy Taxi":
+                speed = 40;
+                break;
+            case "Sedan Taxi":
+                speed = 45;
+                break;
+            case "SUV Taxi":
+                speed = 40;
+                break;
+            default:
+                speed = 40;
+        }
+        return (int) ((distance / speed) * 60); // time in minutes
+    }
+
+    private void showBottomSheet(TaxiInfo autoRickshaw, TaxiInfo economyTaxi, TaxiInfo sedanTaxi, TaxiInfo suvTaxi) {
+        bottomSheetDialog = new BottomSheetDialog(this);
+        View bottomSheetView = getLayoutInflater().inflate(R.layout.bottom_sheet_layout, null);
+
+        // Auto Rickshaw
+        TextView autoRickshawName = bottomSheetView.findViewById(R.id.autoRickshawName);
+        TextView autoRickshawPrice = bottomSheetView.findViewById(R.id.autoRickshawPrice);
+        TextView autoRickshawTime = bottomSheetView.findViewById(R.id.autoRickshawTime);
+
+        autoRickshawName.setText(autoRickshaw.getName());
+        autoRickshawPrice.setText("Price: ₹" + autoRickshaw.getPrice());
+        autoRickshawTime.setText("Time: " + autoRickshaw.getTime() + " mins");
+
+        // Economy Taxi
+        TextView economyTaxiName = bottomSheetView.findViewById(R.id.Economy_Taxi);
+        TextView economyTaxiPrice = bottomSheetView.findViewById(R.id.Economy_Price);
+        TextView economyTaxiTime = bottomSheetView.findViewById(R.id.EconomyTime);
+
+        economyTaxiName.setText(economyTaxi.getName());
+        economyTaxiPrice.setText("Price: ₹" + economyTaxi.getPrice());
+        economyTaxiTime.setText("Time: " + economyTaxi.getTime() + " mins");
+
+        // Sedan Taxi
+        TextView sedanTaxiName = bottomSheetView.findViewById(R.id.SedanName);
+        TextView sedanTaxiPrice = bottomSheetView.findViewById(R.id.SedanPrice);
+        TextView sedanTaxiTime = bottomSheetView.findViewById(R.id.SedanTime);
+
+        sedanTaxiName.setText(sedanTaxi.getName());
+        sedanTaxiPrice.setText("Price: ₹" + sedanTaxi.getPrice());
+        sedanTaxiTime.setText("Time: " + sedanTaxi.getTime() + " mins");
+
+        // SUV Taxi
+        TextView suvTaxiName = bottomSheetView.findViewById(R.id.SUVName);
+        TextView suvTaxiPrice = bottomSheetView.findViewById(R.id.SUVPrice);
+        TextView suvTaxiTime = bottomSheetView.findViewById(R.id.SUVTime);
+
+        suvTaxiName.setText(suvTaxi.getName());
+        suvTaxiPrice.setText("Price: ₹" + suvTaxi.getPrice());
+        suvTaxiTime.setText("Time: " + suvTaxi.getTime() + " mins");
+
+        bottomSheetDialog.setContentView(bottomSheetView);
+        bottomSheetDialog.show();
+    }
+
 
 
 
@@ -312,12 +449,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         fusedLocationClient.getLastLocation()
                                 .addOnSuccessListener(this, location -> {
                                     if (location != null) {
+                                        if (locationMarker != null) {
+                                            locationMarker.remove();
+                                        }
                                         LatLng userLocation = new LatLng(location.getLatitude(), location.getLongitude());
                                         setAddressInEditText(userLocation);
                                         updateSearchViewWithLocation(location);
                                         mMap.addMarker(new MarkerOptions().position(userLocation).title("Your Location"));
                                         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLocation, 16));
                                         start = userLocation;
+
                                     }
                                 });
                     }
@@ -340,5 +481,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public void sos(View view){
+        startActivity(new Intent(Intent.ACTION_DIAL, Uri.parse("tel:103")));
     }
 }
