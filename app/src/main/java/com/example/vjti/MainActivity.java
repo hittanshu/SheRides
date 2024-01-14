@@ -325,7 +325,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             default:
                 rate = 20;
         }
-        return distance * rate;
+        float price = distance * rate;
+        return Float.parseFloat(String.format("%.1f", price));
     }
 
     private int calculateTime(String transportMode, float distance) {

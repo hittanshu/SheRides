@@ -18,13 +18,30 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.VJTI"
         tools:targetApi="31">
+        <activity
+            android:name=".Register"
+            android:exported="false" />
+        <activity
+            android:name=".LoginActivity"
+            android:exported="false" />
+        <activity
+            android:name=".SplashActivity"
+            android:exported="true"
+            android:theme="@style/Theme.AppCompat.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyA0_1dX9noT8-GkEwEUlXk5keaG5XAyatM"/>
-
-        <meta-data android:name="com.google.android.gms.version"
+            android:value="AIzaSyA0_1dX9noT8-GkEwEUlXk5keaG5XAyatM" />
+        <meta-data
+            android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
