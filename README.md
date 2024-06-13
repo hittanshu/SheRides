@@ -42,4 +42,4 @@ We welcome contributions to SheRides! If you have ideas for new features, find b
 
 ## Contact
 
-For questions or feedback, please contact us at mailto:hittupadhyay@gmail.com.
+For questions or feedback, please contact us at hittupadhyay@gmail.com.
