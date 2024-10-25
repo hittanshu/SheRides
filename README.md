@@ -1,6 +1,6 @@
 # SheRides
 
-SheRides is a mobile application designed to provide a safe and reliable cab service exclusively for women, by women. Our mission is to empower women by offering them a secure transportation option and fostering a sense of community and support.
+SheRides is a mobile application designed to provide a safe and reliable cab service exclusively for women, by women. Our mission is to empower women by offering them a secure transportation option and fostering a sense of community and support. We are proud to share that SheRides was awarded second runner-up at the m-Indicator & VJTI Technovanza Presents Hackathon 2024 in the Android Hackathon category.
 
 ## Features
 
